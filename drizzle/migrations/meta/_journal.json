@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790713402288,
+      "tag": "0000_create_scout_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790713667876,
+      "tag": "0001_core_courses_and_parent_links",
+      "breakpoints": true
+    }
+  ]
+}
