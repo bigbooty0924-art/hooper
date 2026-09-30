@@ -62,6 +62,21 @@ function AuthPage() {
 
   const google = async () => {
     setError(null);
+
+    // Lovable's OAuth broker (/~oauth/initiate) only exists on Lovable hosting;
+    // everywhere else (Vercel, v0 preview) it 404s, so use Supabase OAuth directly.
+    const onLovableHost = /(\.lovable\.app|\.lovableproject\.com|lovable\.dev)$/.test(
+      window.location.hostname,
+    );
+    if (!onLovableHost) {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/scout-profile` },
+      });
+      if (oauthError) setError("Google sign-in failed. Try email and password instead.");
+      return;
+    }
+
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
