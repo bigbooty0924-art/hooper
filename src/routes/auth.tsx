@@ -69,12 +69,33 @@ function AuthPage() {
       window.location.hostname,
     );
     if (!onLovableHost) {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}/dashboard` },
-      });
-      if (oauthError) setError("Google sign-in failed. Try email and password instead.");
-      return;
+  // Google refuses to load inside iframes ("This content is blocked"), so when the
+  // app is embedded (e.g. a preview window) open the Google page in a new tab.
+  const inIframe = window.self !== window.top;
+  const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+  provider: "google",
+  options: {
+  redirectTo: `${window.location.origin}/dashboard`,
+  skipBrowserRedirect: true,
+  },
+  });
+  if (oauthError || !data?.url) {
+  setError("Google sign-in failed. Try email and password instead.");
+  return;
+  }
+  if (inIframe) {
+  const popup = window.open(data.url, "_blank", "noopener,noreferrer");
+  if (!popup) {
+  try {
+  window.top!.location.href = data.url;
+  } catch {
+  setError("Your browser blocked the Google window. Allow pop-ups or open the site in a new tab.");
+  }
+  }
+  return;
+  }
+  window.location.assign(data.url);
+  return;
     }
 
     const result = await lovable.auth.signInWithOAuth("google", {
