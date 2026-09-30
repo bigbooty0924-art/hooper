@@ -33,7 +33,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/scout-profile" });
+      if (data.session) navigate({ to: "/dashboard" });
     });
   }, [navigate]);
 
@@ -47,21 +47,36 @@ function AuthPage() {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/scout-profile` },
+        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
       });
       if (signUpError) setError(signUpError.message);
-      else if (data.session) navigate({ to: "/scout-profile" });
+      else if (data.session) navigate({ to: "/dashboard" });
       else setMessage("Check your email to confirm your account, then sign in.");
     } else {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) setError(signInError.message);
-      else navigate({ to: "/scout-profile" });
+      else navigate({ to: "/dashboard" });
     }
     setBusy(false);
   };
 
   const google = async () => {
     setError(null);
+
+    // Lovable's OAuth broker (/~oauth/initiate) only exists on Lovable hosting;
+    // everywhere else (Vercel, v0 preview) it 404s, so use Supabase OAuth directly.
+    const onLovableHost = /(\.lovable\.app|\.lovableproject\.com|lovable\.dev)$/.test(
+      window.location.hostname,
+    );
+    if (!onLovableHost) {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (oauthError) setError("Google sign-in failed. Try email and password instead.");
+      return;
+    }
+
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
@@ -70,7 +85,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/scout-profile" });
+    navigate({ to: "/dashboard" });
   };
 
   return (
