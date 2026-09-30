@@ -22,8 +22,22 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+const LOVABLE_HOST = /(\.lovable\.app|\.lovableproject\.com|lovable\.dev)$/;
+
+// Off Lovable hosting, Google login goes straight to Supabase, which rejects it
+// ("missing OAuth secret") until a Google Client ID/Secret is added there.
+// Set VITE_GOOGLE_AUTH_ENABLED=true once those credentials are configured.
+function isGoogleAvailable() {
+  if (typeof window === "undefined") return false;
+  return (
+    LOVABLE_HOST.test(window.location.hostname) ||
+    import.meta.env["VITE_GOOGLE_AUTH_ENABLED"] === "true"
+  );
+}
+
 function AuthPage() {
   const navigate = useNavigate();
+  const [googleAvailable] = useState(isGoogleAvailable);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,9 +79,7 @@ function AuthPage() {
 
     // Lovable's OAuth broker (/~oauth/initiate) only exists on Lovable hosting;
     // everywhere else (Vercel, v0 preview) it 404s, so use Supabase OAuth directly.
-    const onLovableHost = /(\.lovable\.app|\.lovableproject\.com|lovable\.dev)$/.test(
-      window.location.hostname,
-    );
+    const onLovableHost = LOVABLE_HOST.test(window.location.hostname);
     if (!onLovableHost) {
   // Google refuses to load inside iframes ("This content is blocked"), so when the
   // app is embedded (e.g. a preview window) open the Google page in a new tab.
@@ -148,9 +160,11 @@ function AuthPage() {
           {mode === "signin" ? "Sign in" : "Sign up"}
         </Button>
 
-        <Button type="button" variant="court" className="w-full" onClick={google}>
-          Continue with Google
-        </Button>
+        {googleAvailable && (
+          <Button type="button" variant="court" className="w-full" onClick={google}>
+            Continue with Google
+          </Button>
+        )}
       </form>
 
       <button
