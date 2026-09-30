@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GRADES, type Grade, loadGrade, saveGrade, tierForGrade } from "@/lib/grade";
@@ -100,6 +100,13 @@ function Onboarding() {
       >
         Enter my dashboard
       </Button>
+
+      <p className="mt-6 text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link to="/auth" className="font-semibold text-primary underline-offset-4 hover:underline">
+          Sign in
+        </Link>
+      </p>
     </main>
   );
 }

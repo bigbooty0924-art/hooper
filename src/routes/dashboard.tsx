@@ -11,6 +11,7 @@ import {
   type Grade,
 } from "@/lib/grade";
 import { useDrillStats, WEEKLY_TARGET_DAYS } from "@/lib/drill-stats";
+import { AccountButton } from "@/components/account-button";
 
 export const Route = createFileRoute("/dashboard")({
   ssr: false,
@@ -62,16 +63,19 @@ function Dashboard() {
             {unlocked ? "Recruitment Command Center" : "Skill Foundation"}
           </h1>
         </div>
-        <Button
-          variant="court"
-          size="sm"
-          onClick={() => {
-            clearGrade();
-            navigate({ to: "/" });
-          }}
-        >
-          Change grade level
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="court"
+            size="sm"
+            onClick={() => {
+              clearGrade();
+              navigate({ to: "/" });
+            }}
+          >
+            Change grade
+          </Button>
+          <AccountButton />
+        </div>
       </header>
 
       <section className="card-elevated mt-8 flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
