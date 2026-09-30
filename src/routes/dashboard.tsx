@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Lock, Flame, Target, TrendingUp, ClipboardCheck, Mail, Copy, Check } from "lucide-react";
+import { Lock, Flame, Target, TrendingUp, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -10,6 +10,7 @@ import {
   loadGrade,
   type Grade,
 } from "@/lib/grade";
+import { useDrillStats, WEEKLY_TARGET_DAYS } from "@/lib/drill-stats";
 
 export const Route = createFileRoute("/dashboard")({
   ssr: false,
@@ -93,40 +94,107 @@ function Dashboard() {
 /* ---------------- Skill Foundation (grades 6-8) ---------------- */
 
 const DRILLS = [
-  { name: "Form shooting — 100 makes", done: 5, goal: 6 },
-  { name: "Two-ball dribbling", done: 4, goal: 6 },
-  { name: "Free throws — 50 reps", done: 6, goal: 6 },
-  { name: "Defensive slides", done: 3, goal: 6 },
+  { type: "free_throw", name: "Free throws" },
+  { type: "three_point", name: "3-pointers" },
 ];
+
+function TrainingStats() {
+  const { data: stats, isLoading } = useDrillStats();
+
+  if (isLoading || !stats) {
+    return (
+      <section className="grid gap-4 sm:grid-cols-3" aria-busy="true">
+        <StatCard icon={<Flame />} label="Day streak" value="—" hint="Loading…" />
+        <StatCard icon={<Target />} label="Weekly consistency" value="—" hint="Loading…" />
+        <StatCard icon={<TrendingUp />} label="Drills this month" value="—" hint="Loading…" />
+      </section>
+    );
+  }
+
+  if (!stats.signedIn) {
+    return (
+      <section className="card-elevated flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl">Track your streak</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sign in and log drills to see your real streak, consistency and monthly totals.
+          </p>
+        </div>
+        <Button variant="hero" asChild>
+          <Link to="/auth">Sign in</Link>
+        </Button>
+      </section>
+    );
+  }
+
+  const monthDiff = stats.sessionsThisMonth - stats.sessionsLastMonth;
+
+  return (
+    <section className="grid gap-4 sm:grid-cols-3">
+      <StatCard
+        icon={<Flame />}
+        label="Day streak"
+        value={String(stats.currentStreak)}
+        hint={stats.longestStreak > 0 ? `Longest: ${stats.longestStreak} ${stats.longestStreak === 1 ? "day" : "days"}` : "Log a drill to start"}
+      />
+      <StatCard
+        icon={<Target />}
+        label="Weekly consistency"
+        value={`${stats.weeklyConsistency}%`}
+        hint={`${stats.daysThisWeek} of ${WEEKLY_TARGET_DAYS} training days`}
+      />
+      <StatCard
+        icon={<TrendingUp />}
+        label="Drills this month"
+        value={String(stats.sessionsThisMonth)}
+        hint={
+          stats.sessionsLastMonth === 0 && stats.sessionsThisMonth === 0
+            ? "No drills logged yet"
+            : `${monthDiff >= 0 ? "+" : ""}${monthDiff} vs last month`
+        }
+      />
+    </section>
+  );
+}
+
+function WeeklyDrillPlan() {
+  const { data: stats } = useDrillStats();
+
+  return (
+    <section className="card-elevated p-6">
+      <h2 className="text-2xl">This week's drill plan</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Consistency beats intensity. Hit every drill six days a week.
+      </p>
+      <ul className="mt-5 space-y-4">
+        {DRILLS.map((drill) => {
+          const done = Math.min(WEEKLY_TARGET_DAYS, stats?.daysThisWeekByType[drill.type] ?? 0);
+          return (
+            <li key={drill.type}>
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">{drill.name}</span>
+                <span className="text-muted-foreground">
+                  {done}/{WEEKLY_TARGET_DAYS} days
+                </span>
+              </div>
+              <Progress className="mt-2" value={(done / WEEKLY_TARGET_DAYS) * 100} />
+            </li>
+          );
+        })}
+      </ul>
+      <Button variant="court" size="sm" className="mt-5" asChild>
+        <Link to="/scout-profile">Log a drill session</Link>
+      </Button>
+    </section>
+  );
+}
 
 function FoundationDashboard() {
   return (
     <div className="mt-8 space-y-8">
-      <section className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={<Flame />} label="Day streak" value="12" hint="Longest: 21 days" />
-        <StatCard icon={<Target />} label="Weekly consistency" value="78%" hint="18 of 24 drills" />
-        <StatCard icon={<TrendingUp />} label="Drills this month" value="61" hint="+14 vs last month" />
-      </section>
+      <TrainingStats />
 
-      <section className="card-elevated p-6">
-        <h2 className="text-2xl">This week's drill plan</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Consistency beats intensity. Hit every drill six days a week.
-        </p>
-        <ul className="mt-5 space-y-4">
-          {DRILLS.map((drill) => (
-            <li key={drill.name}>
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">{drill.name}</span>
-                <span className="text-muted-foreground">
-                  {drill.done}/{drill.goal}
-                </span>
-              </div>
-              <Progress className="mt-2" value={(drill.done / drill.goal) * 100} />
-            </li>
-          ))}
-        </ul>
-      </section>
+      <WeeklyDrillPlan />
 
       <section>
         <h2 className="text-2xl">Unlocks in 9th grade</h2>
@@ -234,11 +302,7 @@ function RecruitmentSuite() {
 
   return (
     <div className="mt-8 space-y-8">
-      <section className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={<ClipboardCheck />} label="Eligibility steps" value={`${completed}/${ELIGIBILITY.length}`} hint="On track" />
-        <StatCard icon={<Mail />} label="Coaches contacted" value="14" hint="5 replied" />
-        <StatCard icon={<Flame />} label="Day streak" value="12" hint="Drills logged" />
-      </section>
+      <TrainingStats />
 
       <section className="card-elevated p-6">
         <h2 className="text-2xl">NCAA Eligibility Tracker</h2>
